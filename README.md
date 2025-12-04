@@ -1,6 +1,6 @@
 # Ti-23Nb-0.7Ta-2Zr-Interstitials
 
-This repository provides scripts used in the study **“Revealing interstitial energetics in Ti-23Nb-0.7Ta-2Zr gum metal base alloy via universal machine-learning interatomic potentials.”**
+This repository provides scripts used in the manuscript **“Revealing interstitial energetics in Ti-23Nb-0.7Ta-2Zr gum metal base alloy via universal machine-learning interatomic potentials.”**
 
 ## Repository Structure
 
