@@ -1,6 +1,6 @@
 # Ti-23Nb-0.7Ta-2Zr-Interstitials
 
-This repository provides scripts for special quasirandom structure (SQS) generation and structural optimizations with universal machine-learning interatomic potentials (uMLIPs) used in the manuscript **“Revealing interstitial energetics in Ti-23Nb-0.7Ta-2Zr gum metal base alloy via universal machine-learning interatomic potentials.”**
+This repository provides scripts for special quasirandom structure (SQS) generation and structural optimizations with universal machine-learning interatomic potentials (uMLIPs) used in the manuscript (arXiv, preprint) **[“Revealing interstitial energetics in Ti-23Nb-0.7Ta-2Zr gum metal base alloy via universal machine-learning interatomic potentials.](https://arxiv.org/abs/2512.05568)”**
 
 ## Repository Structure
 
