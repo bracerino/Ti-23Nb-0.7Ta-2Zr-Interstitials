@@ -354,11 +354,10 @@ def apply_selective_dynamics_constraints(atoms, selective_dynamics):
     """Apply selective dynamics as ASE constraints with support for partial fixing."""
     if selective_dynamics is None or len(selective_dynamics) != len(atoms):
         return atoms
-    
-    # Check if we have any constraints to apply
+
     has_constraints = False
     for flags in selective_dynamics:
-        if not all(flags):  # If any direction is False (fixed)
+        if not all(flags):
             has_constraints = True
             break
     
@@ -366,33 +365,27 @@ def apply_selective_dynamics_constraints(atoms, selective_dynamics):
         print(f"  🔄 Selective dynamics found but all atoms are completely free")
         return atoms
     
-    # Apply constraints
+
     try:
         from ase.constraints import FixCartesian, FixAtoms
         
         constraints = []
         constraint_summary = []
-        
-        # Group atoms by constraint type
+
         completely_fixed_indices = []
         partial_constraints = []
         
         for i, flags in enumerate(selective_dynamics):
-            if not any(flags):  # All directions fixed (F F F)
+            if not any(flags): 
                 completely_fixed_indices.append(i)
             elif not all(flags):  # Some directions fixed (partial)
-                # ASE FixCartesian uses True for FIXED directions (opposite of VASP)
-                # VASP: T=free, F=fixed
-                # ASE:  T=fixed, F=free
-                mask = [not flag for flag in flags]  # Invert the flags
+                mask = [not flag for flag in flags]
                 partial_constraints.append((i, mask))
-        
-        # Apply complete fixing
+
         if completely_fixed_indices:
             constraints.append(FixAtoms(indices=completely_fixed_indices))
             constraint_summary.append(f"{len(completely_fixed_indices)} atoms completely fixed")
-        
-        # Apply partial constraints - create individual FixCartesian for each atom
+
         if partial_constraints:
             partial_groups = {}
             for atom_idx, mask in partial_constraints:
@@ -402,14 +395,12 @@ def apply_selective_dynamics_constraints(atoms, selective_dynamics):
                 partial_groups[mask_key].append(atom_idx)
             
             for mask, atom_indices in partial_groups.items():
-                # Create individual FixCartesian constraints for each atom
                 for atom_idx in atom_indices:
                     constraints.append(FixCartesian(atom_idx, mask))
                 
                 fixed_dirs = [dir_name for dir_name, is_fixed in zip(['x', 'y', 'z'], mask) if is_fixed]
                 constraint_summary.append(f"{len(atom_indices)} atoms fixed in {','.join(fixed_dirs)} directions")
         
-        # Apply all constraints
         if constraints:
             atoms.set_constraint(constraints)
             
@@ -419,11 +410,10 @@ def apply_selective_dynamics_constraints(atoms, selective_dynamics):
                 print(f"    - {summary}")
         
     except ImportError:
-        # Fallback: only handle completely fixed atoms
         print(f"  ⚠️ FixCartesian not available, only applying complete atom fixing")
         fixed_indices = []
         for i, flags in enumerate(selective_dynamics):
-            if not any(flags):  # All directions False (completely fixed)
+            if not any(flags):
                 fixed_indices.append(i)
         
         if fixed_indices:
@@ -435,11 +425,10 @@ def apply_selective_dynamics_constraints(atoms, selective_dynamics):
             print(f"  ⚠️ No completely fixed atoms found, partial constraints not supported")
     
     except Exception as e:
-        # If FixCartesian fails for any reason, fall back to complete fixing only
         print(f"  ⚠️ FixCartesian failed ({str(e)}), falling back to complete atom fixing only")
         fixed_indices = []
         for i, flags in enumerate(selective_dynamics):
-            if not any(flags):  # All directions False (completely fixed)
+            if not any(flags):
                 fixed_indices.append(i)
         
         if fixed_indices:
@@ -458,12 +447,10 @@ def generate_concentration_combinations(substitutions):
     """Generate all possible combinations of concentrations."""
     import itertools
 
-    # Check if any element has multiple concentrations
     has_multiple = any('concentration_list' in sub_info and len(sub_info['concentration_list']) > 1
                        for sub_info in substitutions.values())
 
     if not has_multiple:
-        # Convert single concentrations to the original format
         single_combo = {}
         for element, sub_info in substitutions.items():
             if 'concentration_list' in sub_info:
@@ -482,7 +469,6 @@ def generate_concentration_combinations(substitutions):
             }
         return [single_combo]
 
-    # Generate all combinations for multiple concentrations
     elements = []
     concentration_lists = []
 
@@ -522,16 +508,13 @@ def create_combination_name(combo_substitutions):
         remaining_concentration = 1 - concentration
 
         if concentration == 0:
-            # No substitution, pure original element
             name_parts.append(f"{original_element}100pct")
         elif concentration == 1:
-            # Complete substitution
             if new_element == 'VACANCY':
                 name_parts.append(f"{original_element}0pct_100pct_vacant")
             else:
                 name_parts.append(f"{new_element}100pct")
         else:
-            # Partial substitution
             remaining_pct = int(remaining_concentration * 100)
             substitute_pct = int(concentration * 100)
 
@@ -620,8 +603,7 @@ class OptimizationLogger:
 
             # Calculate energy per atom
             energy_per_atom = energy / len(atoms)
-            
-            # Calculate energy change
+
             if hasattr(self, 'previous_energy') and self.previous_energy is not None:
                 energy_change = abs(energy - self.previous_energy)
                 energy_change_per_atom = energy_change / len(atoms)
@@ -685,12 +667,9 @@ def main():
     print(f"💻 Device: cuda")
     print(f"🧵 CPU threads: {os.environ.get('OMP_NUM_THREADS', 'default')}")
 
-    # Create output directories
     Path("optimized_structures").mkdir(exist_ok=True)
     Path("results").mkdir(exist_ok=True)
     
-
-    # Find and validate POSCAR files in current directory
     print("\n📁 Looking for POSCAR files in current directory...")
     structure_files = [f for f in os.listdir(".") if f.startswith("POSCAR") or f.endswith(".vasp") or f.endswith(".poscar")]
 
@@ -709,7 +688,6 @@ def main():
         except Exception as e:
             print(f"  {i}. {filename} - ❌ Error: {str(e)}")
 
-    # Setup calculator
     print("\n🔧 Setting up MLIP calculator...")
     device = "cuda"
     print(f"🔧 Initializing ORB calculator on {device}...")
@@ -717,15 +695,13 @@ def main():
         from orb_models.forcefield import pretrained
         from orb_models.forcefield.calculator import ORBCalculator
 
-        # Convert dtype to ORB precision format
         if "float32" == "float32":
-            precision = "float32-high"  # Recommended for GPU acceleration
+            precision = "float32-high"  
         else:
-            precision = "float32-highest"  # Higher precision option
+            precision = "float32-highest"  
 
         print(f"🎯 Using precision: {precision}")
 
-        # Get the pretrained model function by name
         model_function = getattr(pretrained, "orb_v3_conservative_inf_omat")
         orbff = model_function(
             device=device,
@@ -802,7 +778,6 @@ def main():
             atoms.calc = calculator
             print(f"  📊 Structure has {len(atoms)} atoms")
             initial_atoms_copy = atoms.copy()
-            # Apply selective dynamics constraints if present
             if selective_dynamics is not None:
                 atoms = apply_selective_dynamics_constraints(atoms, selective_dynamics)
             else:
@@ -819,7 +794,6 @@ def main():
                 opt_mode = "atoms_only"
                 print(f"  🔒 Optimizing atoms only (fixed cell)")
             elif optimization_type == "Cell only (fixed atoms)":
-                # Add constraint to fix all atoms for cell-only optimization
                 existing_constraints = atoms.constraints if hasattr(atoms, 'constraints') and atoms.constraints else []
                 all_fixed_constraint = FixAtoms(mask=[True] * len(atoms))
                 atoms.set_constraint([all_fixed_constraint] + existing_constraints)
@@ -875,7 +849,6 @@ def main():
             else:
                 convergence_status = "CONVERGED" if (force_converged and stress_converged) else "MAX_STEPS_REACHED"
 
-            # Save optimized structure with selective dynamics preserved
             base_name = filename.replace('.vasp', '').replace('POSCAR', '')
             
             output_filename = f"optimized_structures/optimized_{base_name}.vasp"
@@ -955,7 +928,6 @@ def main():
                 "num_fixed_atoms": len([flags for flags in (selective_dynamics or []) if not any(flags)]),
                 "output_structure": output_filename,
                 "trajectory_file": trajectory_filename,
-                # Convert dict to individual fields for CSV compatibility
                 "optimize_lattice_a": optimize_lattice.get('a', True) if isinstance(optimize_lattice, dict) else True,
                 "optimize_lattice_b": optimize_lattice.get('b', True) if isinstance(optimize_lattice, dict) else True,
                 "optimize_lattice_c": optimize_lattice.get('c', True) if isinstance(optimize_lattice, dict) else True
@@ -976,8 +948,6 @@ def main():
             if formation_energy is not None:
                 print(f"  ✅ Formation energy: {formation_energy:.6f} eV/atom")
             results.append(result)
-            
-            # Save results after each structure
             df_results = pd.DataFrame(results)
             df_results.to_csv("results/optimization_results.csv", index=False)
             print(f"  💾 Results updated and saved")
@@ -992,7 +962,6 @@ def main():
             df_results.to_csv("results/optimization_results.csv", index=False)
             print(f"  💾 Results updated and saved (with error)")
 
-    # Final summary save
     df_results = pd.DataFrame(results)
     df_results.to_csv("results/optimization_results.csv", index=False)
 
@@ -1024,7 +993,6 @@ def main():
                 f.write(f"Structure: {result['structure']} - ERROR: {result['error']}\n\n")
     
     print(f"💾 Saved summary to results/optimization_summary.txt")
-    # Generate optimization plots
     print("\n📊 Generating optimization plots...")
     successful_results = [r for r in results if "error" not in r]
     
@@ -1032,7 +1000,6 @@ def main():
         try:
             import matplotlib.pyplot as plt
             
-            # Set global font sizes
             plt.rcParams.update({
                 'font.size': 18,
                 'axes.titlesize': 24,
@@ -1043,7 +1010,6 @@ def main():
                 'figure.titlesize': 26
             })
             
-            # Prepare data
             structure_names = [r["structure"] for r in successful_results]
             final_energies = [r["final_energy_eV"] for r in successful_results]
             
@@ -1057,12 +1023,10 @@ def main():
                       rotation=45, ha='right', fontsize=18, fontweight='bold')
             plt.yticks(fontsize=18, fontweight='bold')
             
-            # Extend y-axis to accommodate labels above bars
             y_min, y_max = plt.ylim()
             y_range = y_max - y_min
             plt.ylim(y_min, y_max + y_range * 0.15)
             
-            # Add vertical value labels above bars
             for i, (bar, energy) in enumerate(zip(bars, final_energies)):
                 plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + y_range * 0.02, 
                         f'{energy:.3f}', ha='center', va='bottom', fontsize=16, fontweight='bold', 
@@ -1090,11 +1054,8 @@ def main():
                           rotation=45, ha='right', fontsize=18, fontweight='bold')
                 plt.yticks(fontsize=18, fontweight='bold')
                 
-                # Extend y-axis to accommodate labels (handle positive and negative values)
                 y_min, y_max = plt.ylim()
                 y_range = y_max - y_min
-                
-                # Check if we have negative values
                 has_negative = any(fe < 0 for fe in valid_fe)
                 has_positive = any(fe > 0 for fe in valid_fe)
                 
@@ -1105,7 +1066,6 @@ def main():
                 else:
                     plt.ylim(y_min - y_range * 0.05, y_max + y_range * 0.15)
                 
-                # Add vertical value labels outside bars
                 for i, (bar, fe) in enumerate(zip(bars, valid_fe)):
                     if fe >= 0:
                         y_pos = bar.get_height() + y_range * 0.02
@@ -1137,18 +1097,16 @@ def main():
                           rotation=45, ha='right', fontsize=18, fontweight='bold')
                 plt.yticks(fontsize=18, fontweight='bold')
                 
-                # Extend y-axis to accommodate labels above bars
                 y_min, y_max = plt.ylim()
                 y_range = max(relative_energies) if max(relative_energies) > 0 else 1
                 plt.ylim(-y_range * 0.1, max(relative_energies) + y_range * 0.15)
                 
-                # Add vertical value labels above bars
                 for i, (bar, re) in enumerate(zip(bars, relative_energies)):
                     if re > 0:
                         y_pos = bar.get_height() + y_range * 0.02
                         va_align = 'bottom'
                     else:
-                        y_pos = y_range * 0.05  # Position above zero line for zero values
+                        y_pos = y_range * 0.05 
                         va_align = 'bottom'
                     plt.text(bar.get_x() + bar.get_width()/2, y_pos, 
                             f'{re:.1f}', ha='center', va=va_align, fontsize=16, fontweight='bold', 
@@ -1162,21 +1120,17 @@ def main():
             # 4. Lattice Parameter Changes Plot
             print("  📏 Reading detailed optimization summary for lattice changes...")
             try:
-                # Read the detailed summary file that contains lattice information
                 detailed_summary_file = "results/optimization_detailed_summary.csv"
                 if os.path.exists(detailed_summary_file):
                     df_lattice = pd.read_csv(detailed_summary_file)
                     
                     if len(df_lattice) > 0:
                         plt.figure(figsize=(18, 10))
-                        
-                        # Extract lattice changes
                         structures = df_lattice['Structure'].tolist()
                         a_changes = df_lattice['a_change_percent'].tolist()
                         b_changes = df_lattice['b_change_percent'].tolist()
                         c_changes = df_lattice['c_change_percent'].tolist()
                         
-                        # Create grouped bar chart
                         x = np.arange(len(structures))
                         width = 0.25
                         
@@ -1191,15 +1145,12 @@ def main():
                                   rotation=45, ha='right', fontsize=18, fontweight='bold')
                         plt.yticks(fontsize=18, fontweight='bold')
                         
-                        # Add horizontal line at zero
                         plt.axhline(y=0, color='black', linestyle='-', alpha=0.5, linewidth=2)
                         plt.grid(True, alpha=0.3, axis='y')
                         
-                        # Add legend below x-axis
                         plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
                                   ncol=3, fontsize=18, frameon=False)
                         
-                        # Adjust layout to accommodate legend
                         plt.subplots_adjust(bottom=0.2)
                         plt.tight_layout()
                         plt.savefig('results/lattice_parameter_changes.png', dpi=300, bbox_inches='tight')
@@ -1212,8 +1163,7 @@ def main():
                     
             except Exception as lattice_error:
                 print(f"  ⚠️ Error creating lattice changes plot: {lattice_error}")
-            
-            # Reset matplotlib settings
+
             plt.rcParams.update(plt.rcParamsDefault)
             
         except ImportError:
